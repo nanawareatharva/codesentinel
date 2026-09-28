@@ -9,9 +9,9 @@ from buglens.config import FEATURES, LABEL
 
 # NASA MDP uses McCabe and Halstead metrics.
 NASA_COLUMN_MAP = {
-    "v(g)": "cyclomatic_complexity", "loc": "loc", "l": "maintainability_index",
+    "v(g)": "cyclomatic_complexity", "v_g": "cyclomatic_complexity", "loc": "loc", "l": "maintainability_index",
     "lOCode": "churn", "uniq_Op": "unique_developers", "b": "bug_fix_commits",
-    "n": "file_age_days", "t": "recent_churn", "defects": LABEL,
+    "n": "file_age_days", "t": "recent_churn", "defects": LABEL, "problems": LABEL,
     # Current klainfo/NASADefectDataset files use these descriptive names.
     "CYCLOMATIC_COMPLEXITY": "cyclomatic_complexity",
     "LOC_TOTAL": "loc",
