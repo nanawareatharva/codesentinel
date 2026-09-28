@@ -58,10 +58,13 @@ def _find_column(columns: pd.Index, desired: str) -> str | None:
 
 
 def load_arff(filepath: str, column_map: dict[str, str]) -> pd.DataFrame:
-    """Load one ARFF file and map it to the unified schema, if possible."""
+    """Load one ARFF or current PROMISE CSV file into the unified schema."""
     try:
-        raw, _metadata = arff.loadarff(filepath)
-        df = _decode_bytes(pd.DataFrame(raw))
+        if Path(filepath).suffix.lower() == ".csv":
+            df = pd.read_csv(filepath)
+        else:
+            raw, _metadata = arff.loadarff(filepath)
+            df = _decode_bytes(pd.DataFrame(raw))
     except Exception as exc:
         print(f"  Cannot load {filepath}: {exc}")
         return pd.DataFrame()
@@ -93,7 +96,8 @@ def load_all_datasets() -> pd.DataFrame:
         if not directory.exists():
             print(f"  {directory} not found. Run scripts/download_datasets.py")
             continue
-        for file in sorted(directory.glob("*.arff")):
+        files = sorted([*directory.glob("*.arff"), *directory.glob("*.csv")])
+        for file in files:
             frame = load_arff(str(file), mapping)
             if frame.empty:
                 continue

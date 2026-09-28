@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 NASA_BASE = "https://raw.githubusercontent.com/klainfo/NASADefectDataset/master/OriginalData/MDP"
 NASA_FILES = ["CM1.arff", "KC1.arff", "KC2.arff", "MC1.arff", "MW1.arff", "PC1.arff", "PC3.arff", "PC4.arff"]
-PROMISE_BASE = "https://raw.githubusercontent.com/klainfo/DefectData/master/inst/extdata/ck"
+PROMISE_BASE = "https://raw.githubusercontent.com/klainfo/DefectData/master/inst/extdata/terapromise/ck"
 PROMISE_FILES = ["ant-1.7.arff", "camel-1.6.arff", "jedit-4.3.arff", "log4j-1.2.arff", "poi-3.0.arff"]
 
 
@@ -37,7 +37,9 @@ def _download_group(label: str, base: str, files: list[str], directory: str) -> 
 
 def main() -> None:
     _download_group("NASA MDP", NASA_BASE, NASA_FILES, "data/raw/nasa_mdp")
-    _download_group("PROMISE", PROMISE_BASE, PROMISE_FILES, "data/raw/promise")
+    # The maintained DefectData package now publishes these projects as CSV.
+    promise_files = [filename.replace(".arff", ".csv") for filename in PROMISE_FILES]
+    _download_group("PROMISE", PROMISE_BASE, promise_files, "data/raw/promise")
     print("\nDone. Check data/raw/ for files.")
 
 
