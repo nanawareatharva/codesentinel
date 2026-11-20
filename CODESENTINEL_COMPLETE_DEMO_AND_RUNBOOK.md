@@ -69,68 +69,123 @@ python scripts/verify_all_phases.py
 
 # 2. Complete REST API Demonstration Guide (All Endpoints)
 
-FastAPI exposes the entire platform as an enterprise microservice. You can demonstrate every endpoint using the **Interactive Swagger UI** or via **PowerShell commands**.
+FastAPI exposes the entire platform as an enterprise microservice. You can demonstrate every single endpoint using either:
+1. **The Interactive Swagger UI (Recommended for Viva)**: Visually click, view auto-generated documentation, and execute requests directly in the browser.
+2. **PowerShell Terminal Commands**: Execute copy-paste ready `Invoke-RestMethod` commands in a second terminal window.
+
+---
 
 ### 2.1 Start the API Server
-In your terminal, launch the Uvicorn ASGI server:
+
+In your terminal (with `.venv` activated), launch the Uvicorn ASGI server:
 ```powershell
 python -m uvicorn backend.main:app --reload --port 8000
 ```
-- **Server URL**: `http://127.0.0.1:8000`
+- **Server Address**: `http://127.0.0.1:8000`
 - **Interactive Swagger Documentation**: 👉 **`http://127.0.0.1:8000/docs`**
-- **Alternative ReDoc View**: `http://127.0.0.1:8000/redoc`
+- **Alternative ReDoc Specification**: `http://127.0.0.1:8000/redoc`
 
 ---
 
-## 2.2 Comprehensive Endpoint-by-Endpoint Catalog
+## 2.2 The 11-Step Sequential Viva Demonstration Flow
 
-Open a **second terminal tab** (or use the Swagger UI in your browser) to demonstrate every endpoint:
+When demonstrating the API to professors or examiners, follow this exact sequential order so that primary keys (`run_id`) connect together logically from analysis $\to$ priority queue $\to$ multi-agent testing $\to$ feedback retraining:
 
 ```
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                              FASTAPI ENDPOINT CATALOG                                  │
-├─────────┬──────────────────────────────────────────┬───────────────────────────────────┤
-│ Method  │ Route                                    │ Functional Role                   │
-├─────────┼──────────────────────────────────────────┼───────────────────────────────────┤
-│ GET     │ /health                                  │ System Readiness & Model Check    │
-│ GET     │ /                                        │ API Metadata & Docs Link          │
-│ POST    │ /buglens/predict                         │ Trigger Repository Analysis & DB  │
-│ GET     │ /buglens/runs                            │ List Historical Analysis Runs     │
-│ GET     │ /buglens/runs/{run_id}                   │ Fetch Detailed Run & Function List│
-│ GET     │ /buglens/runs/{run_id}/queue             │ Priority Queue Feed (HIGH/MED)    │
-│ GET     │ /buglens/runs/{run_id}/functions/{name}  │ Specific Function SHAP Drivers    │
-│ POST    │ /autotestarmy/generate                   │ Launch Multi-Agent Test Synthesis │
-│ GET     │ /autotestarmy/runs/{run_id}              │ Poll Test Run Status & Coverage   │
-│ POST    │ /feedback/record                         │ Ingest Test Results as Labels     │
-│ GET     │ /feedback/stats                          │ Query Accumulated Feedback Stats  │
-│ POST    │ /feedback/retrain                        │ Trigger LightGBM Retraining Cycle │
-└─────────┴──────────────────────────────────────────┴───────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                               11-STEP VIVA DEMONSTRATION WORKFLOW                                      │
+├──────┬──────────────────────────────────────────┬────────┬─────────────────────────────────────────────┤
+│ Step │ Endpoint & Method                        │ Tag    │ Demonstration Role                          │
+├──────┼──────────────────────────────────────────┼────────┼─────────────────────────────────────────────┤
+│ 1    │ GET  /health                             │ General│ Prove SQLite & pre-trained ML models ready  │
+│ 2    │ GET  /                                   │ General│ Display API root metadata & documentation   │
+│ 3    │ POST /buglens/predict                    │ BugLens│ Analyze repository (e.g. Flask), gets run_id│
+│ 4    │ GET  /buglens/runs                       │ BugLens│ List historical repository audits in DB     │
+│ 5    │ GET  /buglens/runs/{run_id}              │ BugLens│ Inspect all 410 functions & bug risk tiers  │
+│ 6    │ GET  /buglens/runs/{run_id}/queue        │ BugLens│ ⭐ KEY NOVELTY: Extract Priority Queue      │
+│ 7    │ GET  /buglens/runs/{run_id}/functions/...│ BugLens│ Inspect TreeSHAP mathematical risk drivers  │
+│ 8    │ POST /autotestarmy/generate              │ ATA    │ Launch multi-agent test synthesis loop      │
+│ 9    │ GET  /autotestarmy/runs/{run_id}         │ ATA    │ Poll test execution status & final coverage │
+│ 10   │ POST /feedback/record                    │Feedback│ Ingest dynamic test outcomes as labels      │
+│ 11   │ GET  /feedback/stats & POST /retrain     │Feedback│ Query label counts & retrain LightGBM live  │
+└──────┴──────────────────────────────────────────┴────────┴─────────────────────────────────────────────┘
 ```
 
 ---
 
-### Endpoint 1: `GET /health` (System Health & Model Status)
-- **Purpose**: Confirms the database is connected and LightGBM models are active in RAM.
-- **Swagger UI**: Click `GET /health` $\to$ "Try it out" $\to$ "Execute".
+## 2.3 Comprehensive Endpoint-by-Endpoint Catalog
+
+---
+
+### Endpoint 1: `GET /health` (System Readiness & Pre-Loaded Models)
+- **Tag**: `General`
+- **Functional Role**: Proves that the SQLite database is reachable and all 3 pre-trained artifacts (`lightgbm_model.pkl`, `scaler.pkl`, `shap_explainer.pkl`) are verified in memory.
+- **Swagger UI Steps**:
+  1. In Swagger UI (`http://127.0.0.1:8000/docs`), expand the `General` section.
+  2. Click on `GET /health`.
+  3. Click the white **"Try it out"** button on the top right.
+  4. Click the blue **"Execute"** button.
+- **Parameters**: None required.
 - **PowerShell Command**:
   ```powershell
   Invoke-RestMethod -Uri "http://127.0.0.1:8000/health" -Method GET | ConvertTo-Json
   ```
-- **Response**:
+- **Expected JSON Response (HTTP 200)**:
   ```json
   {
     "status": "ok",
-    "service": "CodeSentinel API",
+    "service": "CodeSentinel",
     "version": "1.0.0",
     "models_loaded": true
+  }
+  ```
+- **🗣️ Viva Talking Point**: *"Before executing any tasks, `/health` confirms our backend microservice integrity and proves that the Scikit-learn scaler and LightGBM model are loaded and active in memory."*
+
+---
+
+### Endpoint 2: `GET /` (Root Discovery & Service Metadata)
+- **Tag**: `General`
+- **Functional Role**: Provides microservice metadata, API versioning, and direct links to documentation.
+- **Swagger UI Steps**:
+  1. Under `General`, click on `GET /`.
+  2. Click **"Try it out"** $\to$ **"Execute"**.
+- **Parameters**: None required.
+- **PowerShell Command**:
+  ```powershell
+  Invoke-RestMethod -Uri "http://127.0.0.1:8000/" -Method GET | ConvertTo-Json
+  ```
+- **Expected JSON Response (HTTP 200)**:
+  ```json
+  {
+    "service": "CodeSentinel API",
+    "version": "1.0.0",
+    "status": "online",
+    "docs": "/docs",
+    "redoc": "/redoc"
   }
   ```
 
 ---
 
-### Endpoint 2: `POST /buglens/predict` (Predict Repository Defects)
-- **Purpose**: Runs live Git mining and AST extraction, scores all functions with LightGBM, saves everything into SQLite (`codesentinel.db`), and returns ranked functions.
-- **Swagger UI**: Click `POST /buglens/predict` $\to$ "Try it out" $\to$ Paste Request Body $\to$ "Execute".
+### Endpoint 3: `POST /buglens/predict` (Live Defect Prediction & Database Persistence)
+- **Tag**: `BugLens`
+- **Functional Role**: Executes live Git commit mining (PyDriller) and AST complexity extraction (Radon), generates LightGBM bug risk probabilities, saves the entire run into SQLite (`codesentinel.db`), and returns ranked functions.
+- **Swagger UI Steps**:
+  1. Under `BugLens`, expand `POST /buglens/predict`.
+  2. Click **"Try it out"**.
+  3. In the **Request body** text area, select all existing text and paste this JSON:
+- **Request Body (Copy-Paste Ready JSON)**:
+  ```json
+  {
+    "repo_path": "data/demo_repos/flask",
+    "max_commits": 50
+  }
+  ```
+  > [!TIP]
+  > **Alternative Demo Repositories You Can Paste**:
+  > - **PSF Requests**: `{"repo_path": "data/demo_repos/requests", "max_commits": 50}`
+  > - **Movie Recommendation**: `{"repo_path": "data/demo_repos/movie_rec", "max_commits": 10}`
+  4. Click the blue **"Execute"** button.
 - **PowerShell Command**:
   ```powershell
   $body = @{
@@ -141,129 +196,418 @@ Open a **second terminal tab** (or use the Swagger UI in your browser) to demons
   $response = Invoke-RestMethod -Uri "http://127.0.0.1:8000/buglens/predict" -Method POST -Body $body -ContentType "application/json"
   $response | Select-Object run_id, repo_path, function_count, high_risk_count, medium_risk_count, low_risk_count | Format-List
   ```
-- **Response**:
+- **Expected JSON Response (HTTP 200)**:
   ```json
   {
-    "run_id": 1,
-    "repo_path": "C:\\Users\\athar\\Desktop\\...\\data\\demo_repos\\flask",
+    "run_id": 19,
+    "repo_path": "C:\Users\athar\Desktop\Notes\4th Year\BE Project\codesentinel\data\demo_repos\flask",
     "function_count": 410,
     "high_risk_count": 0,
     "medium_risk_count": 2,
     "low_risk_count": 408,
     "functions": [
       {
-        "filepath": "...\\helpers.py",
+        "filepath": "...\src\flask\helpers.py",
         "function_name": "send_from_directory",
         "line_start": 957,
         "line_end": 1025,
         "bug_probability": 34.8,
         "risk_category": "MEDIUM",
-        "top_drivers": [ ... ]
+        "cyclomatic_complexity": 14.0,
+        "loc": 68.0,
+        "maintainability_index": 48.2,
+        "churn": 450.0,
+        "unique_developers": 12.0,
+        "bug_fix_commits": 8.0,
+        "file_age_days": 1820.0,
+        "recent_churn": 45.0
       }
     ]
   }
   ```
+- **🗣️ Viva Talking Point**: *"Notice how `/buglens/predict` automatically traversed 50 commits, scanned 410 functions across 28 Python files, and persisted this entire audit to SQLite under run_id=19 with zero cloud dependencies."*
 
 ---
 
-### Endpoint 3: `GET /buglens/runs` (List Historical Analysis Runs)
-- **Purpose**: Displays historical repository audits stored in the SQLite database.
+### Endpoint 4: `GET /buglens/runs` (List Historical Prediction Runs with Pagination)
+- **Tag**: `BugLens`
+- **Functional Role**: Queries the SQLite `prediction_runs` table and returns a chronological summary of all past repository analyses.
+- **Swagger UI Steps**:
+  1. Under `BugLens`, expand `GET /buglens/runs`.
+  2. Click **"Try it out"**.
+  3. Enter the following test values into the parameter inputs:
+| Parameter | In | Type | Required | Exact Value to Enter | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`limit`** | query | integer | No (default: 20) | **`5`** | Limits output to the 5 most recent runs |
+| **`offset`** | query | integer | No (default: 0) | **`0`** | Pagination offset |
+  4. Click **"Execute"**.
 - **PowerShell Command**:
   ```powershell
-  Invoke-RestMethod -Uri "http://127.0.0.1:8000/buglens/runs" -Method GET | Format-Table id, repo_path, function_count, status, created_at
+  Invoke-RestMethod -Uri "http://127.0.0.1:8000/buglens/runs?limit=5&offset=0" -Method GET | Format-Table id, repo_path, function_count, high_risk_count, medium_risk_count, status, created_at
+  ```
+- **Expected JSON Response (HTTP 200)**:
+  ```json
+  [
+    {
+      "id": 19,
+      "repo_path": "C:\Users\athar\Desktop\...\data\demo_repos\flask",
+      "created_at": "2026-11-21T01:30:15",
+      "function_count": 410,
+      "high_risk_count": 0,
+      "medium_risk_count": 2,
+      "low_risk_count": 408,
+      "status": "COMPLETED"
+    }
+  ]
   ```
 
 ---
 
-### Endpoint 4: `GET /buglens/runs/{run_id}` (Get Specific Run Details)
-- **Purpose**: Retrieves all functions, metrics, and risk tiers for a single run ID.
+### Endpoint 5: `GET /buglens/runs/{run_id}` (Retrieve Detailed Run & All Functions)
+- **Tag**: `BugLens`
+- **Functional Role**: Fetches full metadata, metrics, and defect rankings for all functions evaluated during a specific run.
+- **Swagger UI Steps**:
+  1. Under `BugLens`, expand `GET /buglens/runs/{run_id}`.
+  2. Click **"Try it out"**.
+  3. Enter the following test value:
+| Parameter | In | Type | Required | Exact Value to Enter | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`run_id`** | path | integer | **Yes** | **`19`** (or active run ID from Endpoint 3) | Primary key ID in `prediction_runs` table |
+  4. Click **"Execute"**.
 - **PowerShell Command**:
   ```powershell
-  $run = Invoke-RestMethod -Uri "http://127.0.0.1:8000/buglens/runs/1" -Method GET
-  $run.functions | Select-Object -First 5 function_name, bug_probability, risk_category | Format-Table
+  $run = Invoke-RestMethod -Uri "http://127.0.0.1:8000/buglens/runs/19" -Method GET
+  Write-Host "Total Functions Analyzed: $($run.function_count)"
+  $run.functions | Select-Object -First 5 function_name, bug_probability, risk_category, cyclomatic_complexity | Format-Table
   ```
+- **Expected JSON Response (HTTP 200)**:
+  Returns full `PredictResponse` JSON containing all 410 function prediction records for run 19.
 
 ---
 
-### Endpoint 5: `GET /buglens/runs/{run_id}/queue` (The Priority Queue Bridge) ⭐ *KEY NOVELTY*
-- **Purpose**: Isolates **only** the `HIGH` ($\ge 66\%$) and `MEDIUM` ($33\% - 66\%$) risk functions, sorted by bug probability descending.
-- **Why this matters for viva**: You prove to teachers that AutoTestArmy doesn't waste LLM tokens on trivial functions; it tests the priority queue!
+### Endpoint 6: `GET /buglens/runs/{run_id}/queue` (The Priority Queue Bridge) ⭐ *KEY NOVELTY*
+- **Tag**: `BugLens`
+- **Functional Role**: Filters the repository functions to extract **only** the `HIGH` ($\ge 66\%$) and `MEDIUM` ($33\% - 66\%$) risk functions, sorted strictly by bug probability descending.
+- **Architectural Significance**: This endpoint is the critical bridge connecting BugLens to AutoTestArmy. It ensures that generative LLM compute is focused only on defect-prone code rather than wasted on trivial getters, setters, or pass-through methods.
+- **Swagger UI Steps**:
+  1. Under `BugLens`, expand `GET /buglens/runs/{run_id}/queue`.
+  2. Click **"Try it out"**.
+  3. Enter the following test values:
+| Parameter | In | Type | Required | Exact Value to Enter | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`run_id`** | path | integer | **Yes** | **`19`** | Primary key of the analysis run |
+| **`limit`** | query | integer | No (default: 10) | **`5`** | Max number of prioritized functions to return |
+  4. Click **"Execute"**.
 - **PowerShell Command**:
   ```powershell
-  Invoke-RestMethod -Uri "http://127.0.0.1:8000/buglens/runs/1/queue" -Method GET | Format-Table function_name, bug_probability, risk_category
+  Invoke-RestMethod -Uri "http://127.0.0.1:8000/buglens/runs/19/queue?limit=5" -Method GET | Format-Table function_name, bug_probability, risk_category, cyclomatic_complexity, churn
   ```
+- **Expected JSON Response (HTTP 200)**:
+  ```json
+  [
+    {
+      "filepath": "...\src\flask\helpers.py",
+      "function_name": "send_from_directory",
+      "line_start": 957,
+      "line_end": 1025,
+      "bug_probability": 34.8,
+      "risk_category": "MEDIUM",
+      "cyclomatic_complexity": 14.0,
+      "churn": 450.0
+    },
+    {
+      "filepath": "...\src\flask\scaffold.py",
+      "function_name": "errorhandler",
+      "line_start": 580,
+      "line_end": 615,
+      "bug_probability": 34.3,
+      "risk_category": "MEDIUM",
+      "cyclomatic_complexity": 11.0,
+      "churn": 310.0
+    }
+  ]
+  ```
+- **🗣️ Viva Talking Point**: *"Out of 410 functions in Flask, the priority queue isolated the top 2 functions with elevated risk: send_from_directory (34.8%) and errorhandler (34.3%). This proves our system optimizes LLM efficiency by 99.5% by never wasting generative tokens on safe code!"*
 
 ---
 
-### Endpoint 6: `POST /autotestarmy/generate` (Trigger Multi-Agent Test Generation)
-- **Purpose**: Spawns an asynchronous background worker running the LangGraph state machine (**Analyzer $\to$ Generator $\to$ Critic**) to write pytest test cases.
+### Endpoint 7: `GET /buglens/runs/{run_id}/functions/{function_name}` (TreeSHAP Mathematical Explainability)
+- **Tag**: `BugLens`
+- **Functional Role**: Retrieves the exact TreeSHAP feature attributions and root-cause drivers that explain **why** LightGBM predicted elevated risk for a specific function.
+- **Swagger UI Steps**:
+  1. Under `BugLens`, expand `GET /buglens/runs/{run_id}/functions/{function_name}`.
+  2. Click **"Try it out"**.
+  3. Enter the following test values:
+| Parameter | In | Type | Required | Exact Value to Enter | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`run_id`** | path | integer | **Yes** | **`19`** | Primary key of the analysis run |
+| **`function_name`** | path | string | **Yes** | **`send_from_directory`** | Exact function name to inspect |
+  > [!TIP]
+  > **Other Function Names You Can Test**:
+  > - In Flask: `errorhandler` or `route`
+  > - In Requests: `__init__`
+  > - In Movie Rec: `main`
+  4. Click **"Execute"**.
+- **PowerShell Command**:
+  ```powershell
+  $func = Invoke-RestMethod -Uri "http://127.0.0.1:8000/buglens/runs/19/functions/send_from_directory" -Method GET
+  Write-Host "Function: $($func[0].function_name) | Bug Probability: $($func[0].bug_probability)%"
+  $func[0].shap_explanation.top_risk_drivers | Format-Table feature, label, raw_value, shap_value, direction
+  ```
+- **Expected JSON Response (HTTP 200)**:
+  ```json
+  [
+    {
+      "filepath": "...\src\flask\helpers.py",
+      "function_name": "send_from_directory",
+      "line_start": 957,
+      "line_end": 1025,
+      "bug_probability": 34.8,
+      "risk_category": "MEDIUM",
+      "shap_explanation": {
+        "base_value": 0.182,
+        "prediction": 0.348,
+        "summary": "Prediction driven upward by high cyclomatic complexity (+0.312) and historical churn (+0.245).",
+        "top_risk_drivers": [
+          {
+            "feature": "cyclomatic_complexity",
+            "label": "Cyclomatic Complexity",
+            "raw_value": 14.0,
+            "shap_value": 0.3124,
+            "direction": "INCREASES_RISK"
+          },
+          {
+            "feature": "churn",
+            "label": "Historical Churn (Lines)",
+            "raw_value": 450.0,
+            "shap_value": 0.2451,
+            "direction": "INCREASES_RISK"
+          },
+          {
+            "feature": "file_age_days",
+            "label": "File Age (Days)",
+            "raw_value": 1820.0,
+            "shap_value": -0.1542,
+            "direction": "DECREASES_RISK"
+          }
+        ]
+      }
+    }
+  ]
+  ```
+- **🗣️ Viva Talking Point**: *"TreeSHAP decomposes the black-box probability into additive Shapley values: Cyclomatic complexity (+0.312) and high churn (+0.245) push the risk up, while file maturity (-0.154) pulls it down. This gives developers transparent, actionable root causes."*
+
+---
+
+### Endpoint 8: `POST /autotestarmy/generate` (Trigger Multi-Agent Test Synthesis)
+- **Tag**: `AutoTestArmy`
+- **Functional Role**: Spawns an asynchronous FastAPI background task executing the LangGraph multi-agent pipeline (**Analyzer Agent $\to$ Generator Agent $\to$ Critic Agent**) to synthesize executable unit tests for prioritized functions.
+- **Swagger UI Steps**:
+  1. Under `AutoTestArmy`, expand `POST /autotestarmy/generate`.
+  2. Click **"Try it out"**.
+  3. In the **Request body** text area, paste this exact JSON:
+- **Request Body (Copy-Paste Ready JSON)**:
+  ```json
+  {
+    "prediction_run_id": 19,
+    "max_iterations": 2
+  }
+  ```
+  > [!NOTE]
+  > - **`prediction_run_id`**: Must match an existing run ID from `/buglens/runs` (e.g. `19` or `1`). AutoTestArmy automatically pulls that run's priority queue!
+  > - **`max_iterations`**: Maximum self-healing loops for the Critic (1 to 10; use `2` for quick live demonstration).
+  4. Click **"Execute"**.
 - **PowerShell Command**:
   ```powershell
   $body = @{
-      prediction_run_id = 1
+      prediction_run_id = 19
       max_iterations = 2
   } | ConvertTo-Json
 
-  Invoke-RestMethod -Uri "http://127.0.0.1:8000/autotestarmy/generate" -Method POST -Body $body -ContentType "application/json" | Format-List
+  $res = Invoke-RestMethod -Uri "http://127.0.0.1:8000/autotestarmy/generate" -Method POST -Body $body -ContentType "application/json"
+  $res | Format-List
   ```
-- **Response**:
+- **Expected JSON Response (HTTP 200)**:
   ```json
   {
-    "run_id": 8,
+    "run_id": 13,
     "status": "PENDING",
     "message": "Test generation task queued for 2 functions via AutoTestArmy multi-agent pipeline."
   }
   ```
+- **🗣️ Viva Talking Point**: *"The request returns immediately with status PENDING and run_id=13 because the multi-agent loop runs as an asynchronous background task. The server remains responsive while local Ollama phi3:mini writes tests in the background."*
 
 ---
 
-### Endpoint 7: `GET /autotestarmy/runs/{run_id}` (Poll Test Run Status & Final Coverage)
-- **Purpose**: Tracks execution status, iteration count, and branch code coverage.
+### Endpoint 9: `GET /autotestarmy/runs/{run_id}` (Poll Test Run Status & Final Coverage)
+- **Tag**: `AutoTestArmy`
+- **Functional Role**: Monitors the background test generation progress, iteration count, branch code coverage, and the path to the saved pytest test suite.
+- **Swagger UI Steps**:
+  1. Under `AutoTestArmy`, expand `GET /autotestarmy/runs/{run_id}`.
+  2. Click **"Try it out"**.
+  3. Fill in the parameter:
+| Parameter | In | Type | Required | Exact Value to Enter | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`run_id`** | path | integer | **Yes** | **`12`** (or the generation `run_id` from Endpoint 8) | The ID of the test generation task |
+  4. Click **"Execute"**.
 - **PowerShell Command**:
   ```powershell
-  Invoke-RestMethod -Uri "http://127.0.0.1:8000/autotestarmy/runs/8" -Method GET | Format-List
+  Invoke-RestMethod -Uri "http://127.0.0.1:8000/autotestarmy/runs/12" -Method GET | Format-List
   ```
-- **Response (when complete)**:
+- **Expected JSON Response (HTTP 200 - Completed Run)**:
   ```json
   {
-    "run_id": 8,
-    "prediction_run_id": 1,
+    "run_id": 12,
+    "prediction_run_id": 18,
     "status": "DONE",
     "iterations": 1,
     "final_coverage": 93.7,
-    "test_file_path": "data\\generated_tests\\run_8\\generated_tests.py"
+    "test_file_path": "data\generated_tests\run_12\generated_tests.py"
   }
   ```
+- **🗣️ Viva Talking Point**: *"Once the Critic agent converges or hits the iteration limit, the status transitions to DONE. Here we achieved 93.7% branch coverage, and the synthesized tests are saved permanently to disk."*
 
 ---
 
-### Endpoint 8: `GET /feedback/stats` (Closed-Loop Continuous Feedback Metrics)
-- **Purpose**: Shows how many real-world defect labels ($y=1$) and clean labels ($y=0$) have been generated dynamically by test outcomes.
+### Endpoint 10: `POST /feedback/record` (Ingest Test Results as Heuristic Ground Truth)
+- **Tag**: `Feedback`
+- **Functional Role**: Ingests test execution results (passed, failed, errors, coverage) and converts them into self-learning ground-truth labels ($y=1$ for defect, $y=0$ for clean), appending deduplicated samples to `data/processed/feedback_labels.csv`.
+- **Heuristic Rule**:
+  - `failed > 0` or `errors > 0` $\implies$ **Defective ($y = 1$)**
+  - `failed == 0` and `coverage >= 75%` $\implies$ **Clean ($y = 0$)**
+  - `coverage < 75%` with 0 failures $\implies$ Inconclusive (skipped to avoid label noise)
+- **Swagger UI Steps**:
+  1. Under `Feedback`, expand `POST /feedback/record`.
+  2. Click **"Try it out"**.
+  3. In the **Request body** text area, select all existing text and paste this JSON:
+- **Request Body (Copy-Paste Ready JSON — Defective Example)**:
+  ```json
+  {
+    "target_functions": [
+      {
+        "filepath": "src/requests/models.py",
+        "function_name": "__init__",
+        "cyclomatic_complexity": 8.0,
+        "loc": 45.0,
+        "maintainability_index": 52.3,
+        "churn": 120.0,
+        "unique_developers": 4.0,
+        "bug_fix_commits": 3.0,
+        "file_age_days": 450.0,
+        "recent_churn": 15.0
+      }
+    ],
+    "test_results": {
+      "passed": 0,
+      "failed": 2,
+      "errors": 0,
+      "coverage_percent": 65.0
+    },
+    "run_id": 19
+  }
+  ```
+  > [!TIP]
+  > **To Test a Clean Function Label ($y = 0$)**: Change `test_results` to:
+  > `{"passed": 5, "failed": 0, "errors": 0, "coverage_percent": 88.5}`
+  4. Click **"Execute"**.
+- **PowerShell Command**:
+  ```powershell
+  $body = @{
+      target_functions = @(
+          @{
+              filepath = "src/requests/models.py"
+              function_name = "__init__"
+              cyclomatic_complexity = 8.0
+              loc = 45.0
+              maintainability_index = 52.3
+              churn = 120.0
+              unique_developers = 4.0
+              bug_fix_commits = 3.0
+              file_age_days = 450.0
+              recent_churn = 15.0
+          }
+      )
+      test_results = @{
+          passed = 0
+          failed = 2
+          errors = 0
+          coverage_percent = 65.0
+      }
+      run_id = 19
+  } | ConvertTo-Json -Depth 5
+
+  Invoke-RestMethod -Uri "http://127.0.0.1:8000/feedback/record" -Method POST -Body $body -ContentType "application/json" | Format-List
+  ```
+- **Expected JSON Response (HTTP 200)**:
+  ```json
+  {
+    "samples_recorded": 1,
+    "message": "Successfully processed 1 functions; 1 conclusive feedback samples recorded."
+  }
+  ```
+- **🗣️ Viva Talking Point**: *"Because the synthesized tests exposed 2 failures, the feedback aggregator deterministically labeled this function as defective (y=1) and appended it to feedback_labels.csv. No manual human labeling is required!"*
+
+---
+
+### Endpoint 11: `GET /feedback/stats` (Closed-Loop Continuous Feedback Metrics)
+- **Tag**: `Feedback`
+- **Functional Role**: Inspects the accumulated feedback dataset, returning total sample counts, defective count, clean count, defect ratio, and whether retraining criteria are met.
+- **Swagger UI Steps**:
+  1. Under `Feedback`, expand `GET /feedback/stats`.
+  2. Click **"Try it out"**.
+  3. Click **"Execute"**.
+- **Parameters**: None required.
 - **PowerShell Command**:
   ```powershell
   Invoke-RestMethod -Uri "http://127.0.0.1:8000/feedback/stats" -Method GET | Format-List
   ```
-- **Response**:
+- **Expected JSON Response (HTTP 200)**:
   ```json
   {
     "total_samples": 4,
     "defective_count": 2,
     "clean_count": 2,
     "defect_ratio": 0.5,
-    "feedback_file": "data\\processed\\feedback_labels.csv",
+    "feedback_file": "data\processed\feedback_labels.csv",
     "ready_for_retraining": false
   }
   ```
 
 ---
 
-### Endpoint 9: `POST /feedback/retrain` (Trigger On-Demand Model Retraining)
-- **Purpose**: Re-executes Stratified K-Fold SMOTE training on `features_with_feedback.csv`, refreshing the saved LightGBM and SHAP models.
+### Endpoint 12: `POST /feedback/retrain` (Trigger On-Demand Model Retraining)
+- **Tag**: `Feedback`
+- **Functional Role**: Merges the 9,157 NASA benchmark rows with the new feedback samples into `features_with_feedback.csv`, runs 5-fold Stratified Cross-Validation with in-fold SMOTE, and overwrites the active LightGBM and SHAP models in `buglens/model/saved/`.
+- **Swagger UI Steps**:
+  1. Under `Feedback`, expand `POST /feedback/retrain`.
+  2. Click **"Try it out"**.
+  3. In the **Request body** text area, paste this exact JSON:
+- **Request Body (Copy-Paste Ready JSON)**:
+  ```json
+  {
+    "min_samples": 1
+  }
+  ```
+  *(Note: Setting `min_samples: 1` allows triggering retraining immediately for viva demonstration purposes even with a few samples).*
+  4. Click **"Execute"**.
 - **PowerShell Command**:
   ```powershell
   $body = @{ min_samples = 1 } | ConvertTo-Json
   Invoke-RestMethod -Uri "http://127.0.0.1:8000/feedback/retrain" -Method POST -Body $body -ContentType "application/json" | Format-List
   ```
+- **Expected JSON Response (HTTP 200)**:
+  ```json
+  {
+    "retrained": true,
+    "message": "Model retrained successfully with 4 feedback samples.",
+    "feedback_samples": 4,
+    "cv_auc_mean": 0.7712,
+    "cv_auc_std": 0.0145,
+    "timestamp": "2026-11-21T02:35:00"
+  }
+  ```
+- **🗣️ Viva Talking Point**: *"With one API call, CodeSentinel closes the loop: the model retrained on augmented feedback data, achieved an updated cross-validated AUC of 0.7712, and refreshed all production model artifacts in-flight without server downtime!"*
+
 
 ---
 
