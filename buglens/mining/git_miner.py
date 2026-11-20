@@ -5,17 +5,21 @@ from pathlib import Path
 
 import pandas as pd
 from pydriller import Repository
+from tqdm import tqdm
 
 from buglens.config import BUG_FIX_KEYWORDS
 
 GIT_COLUMNS = ["filepath", "commit_count", "churn", "unique_developers", "bug_fix_commits", "file_age_days", "recent_churn"]
 
 
-def mine_repository(repo_path: str, since=None, to=None) -> pd.DataFrame:
+def mine_repository(repo_path: str, max_commits: int = 500, since=None, to=None) -> pd.DataFrame:
     """Return per-Python-file churn, authorship, fix and age features.
 
-    A mining error is reported and yields an empty, schema-correct frame so
-    inference can zero-fill features for untracked or inaccessible repositories.
+    Parameters
+    ----------
+    max_commits : int, optional
+        Cap the number of commits traversed (default 500).  Pass ``0`` or
+        ``None`` to traverse the entire history.
     """
     root = str(Path(repo_path).resolve())
     stats = defaultdict(lambda: {"commit_count": 0, "churn": 0, "developers": set(),
@@ -24,8 +28,12 @@ def mine_repository(repo_path: str, since=None, to=None) -> pd.DataFrame:
     ninety_days_ago = datetime.now(timezone.utc) - timedelta(days=90)
     commits = 0
     try:
-        for commit in Repository(root, since=since, to=to).traverse_commits():
+        commit_iter = Repository(root, since=since, to=to).traverse_commits()
+        for commit in tqdm(commit_iter, desc="  Mining Git history", unit=" commits",
+                           total=max_commits or None, leave=False):
             commits += 1
+            if max_commits and commits > max_commits:
+                break
             for modified in commit.modified_files:
                 path = modified.new_path or modified.old_path
                 if not path or not path.endswith(".py"):

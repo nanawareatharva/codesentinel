@@ -8,6 +8,7 @@ Usage:
     python scripts/demo_buglens.py
     python scripts/demo_buglens.py path/to/your/repo
 """
+import argparse
 import sys
 from pathlib import Path
 
@@ -18,7 +19,7 @@ from buglens.model.predict import predict_repo
 from buglens.model.shap_explainer import explain_function
 
 
-def run_demo(target_repo: str = "data/demo_repos/flask"):
+def run_demo(target_repo: str = "data/demo_repos/flask", max_commits: int | None = 500):
     repo_path = Path(target_repo).resolve()
     if not repo_path.exists():
         print(f"Error: Target repository path not found: {repo_path}")
@@ -28,9 +29,11 @@ def run_demo(target_repo: str = "data/demo_repos/flask"):
     print(f"  CODESENTINEL / BUGLENS — LIVE DEFECT RISK INFERENCE")
     print("=" * 70)
     print(f"Target Repository : {repo_path}")
+    commits_desc = "Full history (all commits)" if not max_commits else f"Last {max_commits} commits"
+    print(f"Mining Scope      : {commits_desc}")
 
     # 1. Run inference
-    results = predict_repo(str(repo_path))
+    results = predict_repo(str(repo_path), max_commits=max_commits)
 
     if not results:
         print("\nNo Python functions found or analyzed.")
@@ -83,7 +86,7 @@ def run_demo(target_repo: str = "data/demo_repos/flask"):
         direction = driver["direction"]
         shap_val = driver["shap_value"]
         sign = "+" if shap_val > 0 else ""
-        print(f"  • {label:<32} (value: {raw_val:<6}) -> {direction:<15} [SHAP: {sign}{shap_val:.4f}]")
+        print(f"  • {label:<34} (value: {raw_val:<6}) -> {direction:<15} [SHAP: {sign}{shap_val:.4f}]")
 
     print("\n" + "=" * 70)
     print("  Demo complete. Phase 0, 1, 2 working as specified!")
@@ -91,5 +94,14 @@ def run_demo(target_repo: str = "data/demo_repos/flask"):
 
 
 if __name__ == "__main__":
-    target = sys.argv[1] if len(sys.argv) > 1 else "data/demo_repos/flask"
-    run_demo(target)
+    parser = argparse.ArgumentParser(description="CodeSentinel / BugLens live repository inference demo")
+    parser.add_argument("repo", nargs="?", default="data/demo_repos/flask",
+                        help="Path to target Python repository (default: data/demo_repos/flask)")
+    parser.add_argument("--max-commits", type=int, default=500,
+                        help="Maximum number of commits to mine (default: 500)")
+    parser.add_argument("--all", action="store_true",
+                        help="Traverse all commits in repository history (no limit)")
+    args = parser.parse_args()
+
+    limit = None if args.all else args.max_commits
+    run_demo(args.repo, max_commits=limit)

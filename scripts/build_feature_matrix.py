@@ -27,6 +27,14 @@ def build() -> pd.DataFrame:
     output[LABEL] = output[LABEL].astype(int)
     if output[LABEL].nunique() != 2:
         raise ValueError("Training data must contain clean and defective samples")
+
+    # Remove duplicate feature vectors to prevent data leakage in cross-validation
+    initial_len = len(output)
+    output = output.drop_duplicates(subset=FEATURES).reset_index(drop=True)
+    removed = initial_len - len(output)
+    if removed:
+        print(f"  Removed {removed} duplicate feature vectors ({removed / initial_len:.1%})")
+
     destination = Path("data/processed/features.csv")
     destination.parent.mkdir(parents=True, exist_ok=True)
     output.to_csv(destination, index=False)

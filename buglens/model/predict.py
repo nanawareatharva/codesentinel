@@ -24,8 +24,17 @@ def _risk_category(probability: float) -> str:
     return "LOW"
 
 
-def predict_repo(repo_path: str) -> list[dict]:
-    """Analyse a local Python repository and return high-risk functions first."""
+def predict_repo(repo_path: str, max_commits: int | None = 500) -> list[dict]:
+    """Analyse a local Python repository and return high-risk functions first.
+
+    Parameters
+    ----------
+    repo_path : str
+        Path to the target Python repository.
+    max_commits : int or None, optional
+        Maximum commits to traverse for Git mining (default 500).
+        Pass 0 or None to mine the complete repository history.
+    """
     model_path = Path(MODEL_DIR) / "lightgbm_model.pkl"
     scaler_path = Path(MODEL_DIR) / "scaler.pkl"
     if not model_path.exists() or not scaler_path.exists():
@@ -33,7 +42,7 @@ def predict_repo(repo_path: str) -> list[dict]:
     root = Path(repo_path).resolve()
     print(f"\n[BugLens] Analysing: {root}")
     model, scaler = joblib.load(model_path), joblib.load(scaler_path)
-    git_df = mine_repository(str(root))
+    git_df = mine_repository(str(root), max_commits=max_commits)
     code_df = extract_repo_metrics(str(root))
     if code_df.empty:
         print("  No Python functions found.")

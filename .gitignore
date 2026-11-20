@@ -6,7 +6,9 @@ __pycache__/
 .env
 data/raw/
 data/demo_repos/
+data/generated_tests/
 data/processed/feedback_labels.csv
+data/processed/features_with_feedback.csv
 buglens/model/saved/*.pkl
 buglens/model/saved/*.joblib
 vscode-extension/node_modules/

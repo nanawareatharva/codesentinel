@@ -28,14 +28,20 @@ def _smote(y: pd.Series) -> SMOTE:
     return SMOTE(random_state=42, k_neighbors=min(5, minority_count - 1))
 
 
-def _cross_validate(X: pd.DataFrame, y: pd.Series) -> np.ndarray:
-    """Evaluate folds without leaking SMOTE/scaler information into validation data."""
+def _cross_validate(X: pd.DataFrame, y: pd.Series) -> dict:
+    """Evaluate folds without leaking SMOTE/scaler information into validation data.
+
+    Returns a dict with CV AUC scores and out-of-fold predictions for honest
+    validation metrics.
+    """
     smallest_class = int(y.value_counts().min())
     splits = min(5, smallest_class)
     if splits < 2:
         raise ValueError("At least two samples in each class are required for CV")
     cv = StratifiedKFold(n_splits=splits, shuffle=True, random_state=42)
     scores = []
+    oof_predictions = np.zeros(len(X), dtype=int)
+    oof_probabilities = np.zeros(len(X), dtype=float)
     for fold, (train_index, validation_index) in enumerate(cv.split(X, y), start=1):
         X_train, X_valid = X.iloc[train_index], X.iloc[validation_index]
         y_train, y_valid = y.iloc[train_index], y.iloc[validation_index]
@@ -43,10 +49,14 @@ def _cross_validate(X: pd.DataFrame, y: pd.Series) -> np.ndarray:
         scaler = StandardScaler().fit(X_resampled)
         model = lgb.LGBMClassifier(**LIGHTGBM_PARAMS)
         model.fit(scaler.transform(X_resampled), y_resampled)
-        score = roc_auc_score(y_valid, model.predict_proba(scaler.transform(X_valid))[:, 1])
+        prob = model.predict_proba(scaler.transform(X_valid))[:, 1]
+        score = roc_auc_score(y_valid, prob)
         scores.append(score)
+        oof_probabilities[validation_index] = prob
+        oof_predictions[validation_index] = (prob >= 0.5).astype(int)
         print(f"    Fold {fold}: AUC = {score:.4f} {'OK' if score >= .70 else 'WARN'}")
-    return np.asarray(scores)
+    return {"scores": np.asarray(scores), "oof_predictions": oof_predictions,
+            "oof_probabilities": oof_probabilities}
 
 
 def train(data_path: str = "data/processed/features.csv") -> dict:
@@ -63,12 +73,22 @@ def train(data_path: str = "data/processed/features.csv") -> dict:
     print(f"\n[1] Loaded {len(df)} rows; defective={y.mean():.1%}")
 
     print("\n[2] Stratified cross-validation (SMOTE only in each training fold)...")
-    cv_scores = _cross_validate(X, y)
+    cv_result = _cross_validate(X, y)
+    cv_scores = cv_result["scores"]
     print(f"    Mean AUC: {cv_scores.mean():.4f} ± {cv_scores.std():.4f}")
     if cv_scores.mean() >= .75:
         print("    Meets target threshold AUC >= 0.75")
     elif cv_scores.mean() < .70:
         print("    WARNING: Mean AUC < 0.70; inspect source metric mapping and dataset quality")
+
+    # Print honest out-of-fold validation metrics
+    oof_pred = cv_result["oof_predictions"]
+    oof_prob = cv_result["oof_probabilities"]
+    print("\n[2b] Out-of-Fold Validation Metrics (on unseen validation splits):")
+    print(f"    OOF AUC:       {roc_auc_score(y, oof_prob):.4f}")
+    print(f"    OOF F1:        {f1_score(y, oof_pred):.4f}")
+    print(f"    OOF Precision: {precision_score(y, oof_pred, zero_division=0):.4f}")
+    print(f"    OOF Recall:    {recall_score(y, oof_pred, zero_division=0):.4f}")
 
     print("\n[3] Applying SMOTE and fitting final scaler/model...")
     X_resampled, y_resampled = _smote(y).fit_resample(X, y)
@@ -79,13 +99,11 @@ def train(data_path: str = "data/processed/features.csv") -> dict:
 
     y_prediction = model.predict(X_scaled)
     y_probability = model.predict_proba(X_scaled)[:, 1]
-    print("\n[4] Resampled training-set evaluation:")
-    print(f"    AUC-ROC: {roc_auc_score(y_resampled, y_probability):.4f}")
-    print(f"    F1: {f1_score(y_resampled, y_prediction):.4f}")
-    print(f"    Precision: {precision_score(y_resampled, y_prediction, zero_division=0):.4f}")
-    print(f"    Recall: {recall_score(y_resampled, y_prediction, zero_division=0):.4f}")
-    print(classification_report(y_resampled, y_prediction, target_names=["Clean", "Defective"], zero_division=0))
-    print("    Confusion matrix:\n", confusion_matrix(y_resampled, y_prediction))
+    print("\n[4] Resampled training-set sanity check (NOT validation — expect high values):")
+    print(f"    Train AUC-ROC: {roc_auc_score(y_resampled, y_probability):.4f}")
+    print(f"    Train F1:      {f1_score(y_resampled, y_prediction):.4f}")
+    print(f"    Train Prec:    {precision_score(y_resampled, y_prediction, zero_division=0):.4f}")
+    print(f"    Train Recall:  {recall_score(y_resampled, y_prediction, zero_division=0):.4f}")
     importance = pd.Series(model.feature_importances_, index=FEATURES).sort_values(ascending=False)
     print("\n[5] Feature importance:\n", importance.to_string())
 

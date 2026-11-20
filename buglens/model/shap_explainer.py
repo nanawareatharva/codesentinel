@@ -6,12 +6,25 @@ import numpy as np
 
 from buglens.config import FEATURES, MODEL_DIR
 
-FEATURE_LABELS = {
-    "cyclomatic_complexity": "High cyclomatic complexity", "loc": "Large function (high LOC)",
-    "maintainability_index": "Low maintainability index", "churn": "High total code churn",
-    "unique_developers": "Many contributors", "bug_fix_commits": "Frequent historical bug fixes",
-    "file_age_days": "Old file with accumulated debt", "recent_churn": "Heavy recent changes (last 90 days)",
+# Each entry is (risk_label, protective_label).  The first element is used
+# when the SHAP value is positive (pushes toward defective), the second when
+# negative (pushes toward clean).
+FEATURE_RISK_LABELS = {
+    "cyclomatic_complexity": ("High cyclomatic complexity", "Low complexity (simple logic)"),
+    "loc":                   ("Large function (high LOC)", "Small compact function"),
+    "maintainability_index": ("Low maintainability index", "High maintainability (protective)"),
+    "churn":                 ("High total code churn", "Stable code with low churn"),
+    "unique_developers":     ("Many contributors", "Few dedicated maintainers"),
+    "bug_fix_commits":       ("Frequent historical bug fixes", "Few/no historical bug fixes"),
+    "file_age_days":         ("Old file with accumulated debt", "Recently created file"),
+    "recent_churn":          ("Heavy recent changes (last 90 days)", "Stable in recent 90 days"),
 }
+
+
+def _dynamic_label(feature: str, shap_value: float) -> str:
+    """Return a human-readable label that matches the SHAP direction."""
+    pair = FEATURE_RISK_LABELS.get(feature, (feature, feature))
+    return pair[0] if shap_value > 0 else pair[1]
 
 
 def _positive_class_values(raw_values) -> np.ndarray:
@@ -33,10 +46,10 @@ def explain_function(feature_values: dict) -> dict:
     expected = np.asarray(explainer.expected_value)
     base = float(expected[1] if expected.ndim and expected.size > 1 else expected.ravel()[0])
     ranked = sorted(zip(FEATURES, values), key=lambda pair: abs(float(pair[1])), reverse=True)
-    drivers = [{"feature": feature, "label": FEATURE_LABELS.get(feature, feature),
+    drivers = [{"feature": feature, "label": _dynamic_label(feature, float(value)),
                 "shap_value": round(float(value), 4), "raw_value": round(float(feature_values.get(feature, 0)), 2),
                 "direction": "increases risk" if value > 0 else "decreases risk"}
                for feature, value in ranked[:4]]
-    summary = ", ".join(FEATURE_LABELS.get(feature, feature) for feature, value in ranked[:3] if value > 0)
+    summary = ", ".join(_dynamic_label(feature, float(value)) for feature, value in ranked[:3] if value > 0)
     return {"top_risk_drivers": drivers, "summary": summary or "No dominant risk factors identified",
             "base_value": round(base, 4), "prediction": round(float(np.sum(values)) + base, 4)}

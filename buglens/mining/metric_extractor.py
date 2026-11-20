@@ -6,7 +6,24 @@ import pandas as pd
 import radon.complexity as radon_cc
 import radon.metrics as radon_metrics
 
-SKIP_DIRS = {".venv", "venv", "__pycache__", "migrations", "node_modules", ".git", "build", "dist", ".tox"}
+_SKIP_EXACT = {"__pycache__", "migrations", "node_modules", ".git", "build", "dist", ".tox", "raw", "demo_repos"}
+_SKIP_PREFIXES = (".venv", "venv", ".env", "env")
+
+
+def _should_skip(path: Path, root: Path | None = None) -> bool:
+    """Return True if *path* passes through a directory that should be excluded."""
+    if root is not None:
+        try:
+            rel_parts = path.resolve().relative_to(root.resolve()).parts[:-1]
+        except ValueError:
+            rel_parts = path.parts[:-1]
+    else:
+        rel_parts = path.parts[:-1]
+
+    for part in rel_parts:
+        if part in _SKIP_EXACT or part.startswith(_SKIP_PREFIXES):
+            return True
+    return False
 
 
 def _extract_ast_metrics(source: str) -> dict[str, dict[str, int]]:
@@ -46,7 +63,7 @@ def _extract_ast_metrics(source: str) -> dict[str, dict[str, int]]:
         for statement in function.body:
             visitor.visit(statement)
         metrics["max_nesting_depth"] = visitor.maximum
-        result[function.name] = metrics
+        result[(function.name, function.lineno)] = metrics
     return result
 
 
@@ -79,7 +96,7 @@ def extract_file_metrics(filepath: str) -> list[dict]:
         loc = max(end - block.lineno + 1, 1)
         if loc < 2:
             continue
-        structural = ast_metrics.get(block.name, {})
+        structural = ast_metrics.get((block.name, block.lineno), {})
         functions.append({"filepath": str(filepath), "function_name": block.name,
                           "line_start": block.lineno, "line_end": end,
                           "cyclomatic_complexity": block.complexity, "loc": loc,
@@ -92,8 +109,8 @@ def extract_file_metrics(filepath: str) -> list[dict]:
 
 def extract_repo_metrics(repo_path: str) -> pd.DataFrame:
     """Scan a repository and return per-function source metrics, excluding tests."""
-    repo = Path(repo_path)
-    files = [file for file in repo.rglob("*.py") if not any(part in SKIP_DIRS for part in file.parts)
+    repo = Path(repo_path).resolve()
+    files = [file for file in repo.rglob("*.py") if not _should_skip(file, root=repo)
              and not file.name.startswith("test_") and not file.name.endswith("_test.py")
              and not file.name.startswith("conftest")]
     print(f"  Scanning {len(files)} Python files...")
