@@ -12,7 +12,7 @@
 ## Document Table of Contents
 1. [Cold-Start Setup (Every Single Command From the Beginning)](#1-cold-start-setup-every-single-command-from-the-beginning)
 2. [Complete REST API Demonstration Guide (All Endpoints)](#2-complete-rest-api-demonstration-guide-all-endpoints)
-3. [Demonstration Across 3 Repositories (Flask, Requests, Movie Rec)](#3-demonstration-across-3-repositories-flask-requests-movie-rec)
+3. [Demonstration Across 4 Repositories (SentinelShop, Flask, Requests, Movie Rec)](#3-demonstration-across-4-repositories-sentinelshop-flask-requests-movie-rec)
 4. [Deep-Dive Demonstration of the BugLens Module](#4-deep-dive-demonstration-of-the-buglens-module)
 5. [Deep-Dive Demonstration of the AutoTestArmy Module](#5-deep-dive-demonstration-of-the-autotestarmy-module)
 6. [Deep-Dive Demonstration of Closed-Loop Feedback & Retraining](#6-deep-dive-demonstration-of-closed-loop-feedback--retraining)
@@ -611,25 +611,63 @@ When demonstrating the API to professors or examiners, follow this exact sequent
 
 ---
 
-# 3. Demonstration Across 3 Repositories (Flask, Requests, Movie Rec)
+# 3. Demonstration Across 4 Repositories (SentinelShop, Flask, Requests, Movie Rec)
 
-During the viva, demonstrating multiple repositories proves that CodeSentinel is **completely repository-agnostic** and works on external open-source code as well as your own personal code.
+During the viva, demonstrating multiple repositories proves that CodeSentinel is **completely repository-agnostic** and works on external open-source code, personal student code, as well as an in-house realistic e-commerce microservice featuring all 3 defect risk categories (HIGH, MEDIUM, LOW).
 
 ```
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                              THE 3 DEMO REPOSITORIES                                   │
-├─────────┬──────────────────────┬────────────────────────┬──────────────────────────────┤
-│ #       │ Repository           │ Nature / Framework     │ Why Demonstrate It?          │
-├─────────┼──────────────────────┼────────────────────────┼──────────────────────────────┤
-│ Repo 1  │ Pallets Flask        │ Mature Web Framework   │ Shows AST complexity & SHAP  │
-│ Repo 2  │ PSF Requests         │ HTTP Client Library    │ Shows shallow clone handling │
-│ Repo 3  │ Movie Recommendation │ Student Project (Own)  │ Shows personal custom code   │
-└─────────┴──────────────────────┴────────────────────────┴──────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                       THE 4 DEMO REPOSITORIES                                          │
+├─────────┬──────────────────────┬────────────────────────┬──────────────────────────────────────────────┤
+│ #       │ Repository           │ Nature / Framework     │ Why Demonstrate It?                          │
+├─────────┼──────────────────────┼────────────────────────┼──────────────────────────────────────────────┤
+│ Repo 1  │ SentinelShop (Custom)│ E-Commerce Logic       │ Showcase HIGH (77%), MEDIUM (39%), LOW (1%)  │
+│ Repo 2  │ Pallets Flask        │ Mature Web Framework   │ Shows AST complexity & TreeSHAP breakdown    │
+│ Repo 3  │ PSF Requests         │ HTTP Client Library    │ Shows shallow clone handling & large code    │
+│ Repo 4  │ Movie Recommendation │ Student Project (Own)  │ Shows personal custom code & local functions │
+└─────────┴──────────────────────┴────────────────────────┴──────────────────────────────────────────────┘
 ```
 
 ---
 
-## 3.1 Repository 1: Pallets Flask (`data/demo_repos/flask`)
+## 3.1 Repository 1: SentinelShop (`data/demo_repos/sentinel_shop`) [PRIMARY VIVA SHOWCASE]
+
+SentinelShop is an in-house Python repository designed specifically for live viva demonstrations. It models an E-Commerce Order Processing & Webhook Reconciliation microservice containing 9 distinct functions across 3 files with 33 historical Git commits across 16 contributors.
+
+It naturally generates **all three risk categories**:
+- **HIGH Risk ($\ge 66\%$)**: `process_complex_checkout` (77.4%), `reconcile_transaction_webhook` (68.6%)
+- **MEDIUM Risk ($33\% - 66\%$)**: `calculate_shipping_and_tax` (38.5%)
+- **LOW Risk ($< 33\%$)**: `format_order_confirmation` (16.7%), `apply_wallet_credit` (8.9%), `validate_session_and_roles` (7.6%), `generate_transaction_receipt` (6.6%), `hash_api_key` (0.9%), `sanitize_username` (0.9%)
+
+### Setup / Reseed Command:
+*(Already pre-configured on disk; run this anytime to freshly re-generate the repository and Git history)*:
+```powershell
+python scripts/setup_sentinel_shop.py
+```
+
+### The 1-Click End-to-End Command:
+```powershell
+python scripts/demo_end_to_end.py data/demo_repos/sentinel_shop --max-iterations 1 --num-targets 1
+```
+
+### Or Modular Step-by-Step Commands:
+```powershell
+# Step 1: Run BugLens Defect Risk Inference & SHAP Root-Cause Analysis
+python scripts/demo_buglens.py data/demo_repos/sentinel_shop
+
+# Step 2: Inspect generated test suite for the #1 HIGH risk target (process_complex_checkout)
+Get-Content data\generated_tests\demo_run\generated_tests.py -Head 35
+
+# Step 3: Run pytest on the generated test file
+pytest data\generated_tests\demo_run\generated_tests.py -v
+```
+
+### 🗣️ What to Explain to the Teacher:
+> *"SentinelShop represents a realistic e-commerce microservice. When BugLens analyzes the codebase, it mines both AST structural complexity (Radon) and Git churn metrics (PyDriller). It successfully identifies high-risk areas like `process_complex_checkout` (77.4% risk, CC=52, LOC=209, 12 maintainers, 2008 lines churn) and medium-risk areas like `calculate_shipping_and_tax` (38.5%), while keeping clean utility functions like `hash_api_key` under 1% risk. AutoTestArmy then synthesizes targeted unit tests for the highest-risk function using our local Ollama model, and records ground-truth feedback into the system."*
+
+---
+
+## 3.2 Repository 2: Pallets Flask (`data/demo_repos/flask`)
 
 Flask is a production WSGI web framework with 500+ commits and 410 functions.
 
@@ -655,7 +693,7 @@ pytest data\generated_tests\demo_run\generated_tests.py -v
 
 ---
 
-## 3.2 Repository 2: PSF Requests (`data/demo_repos/requests`)
+## 3.3 Repository 3: PSF Requests (`data/demo_repos/requests`)
 
 Requests is Python's standard HTTP library, known for strict parameter validation.
 
@@ -686,7 +724,7 @@ pytest data\generated_tests\demo_run\generated_tests.py -v
 
 ---
 
-## 3.3 Repository 3: Atharva's Movie Recommendation System (`data/demo_repos/movie_rec`)
+## 3.4 Repository 4: Atharva's Movie Recommendation System (`data/demo_repos/movie_rec`)
 
 This is your own project repository: [nanawareatharva/Movie_Recommendation_System](https://github.com/nanawareatharva/Movie_Recommendation_System).
 

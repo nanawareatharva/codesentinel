@@ -41,7 +41,10 @@ def explain_function(feature_values: dict) -> dict:
     """Explain one function using stored scaler and TreeExplainer artifacts."""
     scaler = joblib.load(Path(MODEL_DIR) / "scaler.pkl")
     explainer = joblib.load(Path(MODEL_DIR) / "shap_explainer.pkl")
-    row = np.array([[feature_values.get(feature, 0) for feature in FEATURES]], dtype=float)
+    norm_values = dict(feature_values)
+    if float(norm_values.get("maintainability_index", 0.0)) > 1.0:
+        norm_values["maintainability_index"] = float(norm_values["maintainability_index"]) / 100.0
+    row = np.array([[norm_values.get(feature, 0) for feature in FEATURES]], dtype=float)
     values = _positive_class_values(explainer.shap_values(scaler.transform(row)))
     expected = np.asarray(explainer.expected_value)
     base = float(expected[1] if expected.ndim and expected.size > 1 else expected.ravel()[0])

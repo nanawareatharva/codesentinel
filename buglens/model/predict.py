@@ -59,7 +59,10 @@ def predict_repo(repo_path: str, max_commits: int | None = 500) -> list[dict]:
         if feature not in merged:
             merged[feature] = 0.0
         merged[feature] = pd.to_numeric(merged[feature], errors="coerce").fillna(0.0)
-    probabilities = model.predict_proba(scaler.transform(merged[FEATURES]))[:, 1]
+    model_input = merged[FEATURES].copy()
+    if (model_input["maintainability_index"] > 1.0).any():
+        model_input["maintainability_index"] = (model_input["maintainability_index"] / 100.0).clip(0.0, 1.0)
+    probabilities = model.predict_proba(scaler.transform(model_input))[:, 1]
     results = []
     for probability, (_, row) in zip(probabilities, merged.iterrows()):
         value = float(probability)
